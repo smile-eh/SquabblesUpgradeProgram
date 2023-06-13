@@ -1,7 +1,5 @@
 # Squabbles Upgrade Program (S.U.P.)
 
-Summarization of the the Idea and Conceptualizationf for the web browser script.
-
 # Purpose or Goal
 
 Userscript that aims to enhance the user experience on Squabbles.io, by providing additional functionality and settings.
