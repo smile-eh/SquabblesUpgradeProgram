@@ -239,9 +239,8 @@ class PageModifier{
         if(enabled){
             Helpers.checkElement(".comment")
                 .then((element) => {
-                const comments = document.querySelectorAll(".comment:not(.compact_loaded)");
+                const comments = document.querySelectorAll(".comment");
                 for(let c of comments){
-                    c.classList.add("compact_loaded");
                     c.querySelector(".comment-collapse-button").click();
                 }
             });
