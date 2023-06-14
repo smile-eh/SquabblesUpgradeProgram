@@ -138,11 +138,15 @@ class Settings{
             case "preview": return this.togglePreview();
         }
     }
-    startEventListeners(pageModifier){
+    startSettingUpdateListeners(pageModifier){
         GM.addValueChangeListener("compact", () => pageModifier.compactMode(this.compact));
         GM.addValueChangeListener("reverse", () => pageModifier.reverseMode(this.reverse));
         GM.addValueChangeListener("topScroll", () => pageModifier.topScrollMode(this.topScroll));
-        GM.addValueChangeListener("preview", () => pageModifier.previewMode(this.preview, pageModifier.api));
+        GM.addValueChangeListener("preview", () => pageModifier.previewMode(this.preview));
+    }
+    setupInitialElements(pageModifier){
+        PageModifier.setupReverseMode();
+        PageModifier.setupPreviewMode();
     }
 }
 
@@ -235,44 +239,37 @@ class PageModifier{
 
     If you are modifying the page in another location, consider moving it here.
     */
+
     compactMode(enabled){
-        if(enabled){
-            Helpers.checkElement(".comment")
-                .then((element) => {
-                const comments = document.querySelectorAll(".comment");
+        Helpers.checkElement(".comment")
+            .then((element) => {
+            if(enabled){
+                const comments = document.querySelectorAll(".comment:not(.compact_loaded)");
                 for(let c of comments){
+                    c.classList.add("compact_loaded");
                     c.querySelector(".comment-collapse-button").click();
                 }
-            });
-        }
-        else {
-            const comments = document.querySelectorAll(".comment");
-            for(let c of comments){
-                const anchors = c.querySelectorAll("a");
-                for(let a of anchors){
-                    if(a.innerHTML == "Expand") a.click();
+            }
+            else {
+                const comments = document.querySelectorAll(".comment");
+                for(let c of comments){
+                    const anchors = c.querySelectorAll("a");
+                    for(let a of anchors){
+                        if(a.innerHTML == "Expand") a.click();
+                    }
                 }
             }
-        }
+        });
     }
     reverseMode(enabled){
-        // Whether or not it is enabled
-        // Add a class to the divs, they do not have one
-        Helpers.checkElement("#content-wrapper")
-            .then((element) => {
-            let posts = document.querySelectorAll("#content-wrapper .page .container")[0].querySelectorAll(":scope > div:not([class])");
-            for(let p of posts){
-                p.classList.add("swap_post_loaded"); //Easier to work with now!
-            }
-        });
-
+        PageModifier.setupReverseMode();
         if(enabled){
             Helpers.checkElement(".swap_post_loaded")
                 .then((element) => {
                 let posts = document.querySelectorAll(".swap_post_loaded:not(.swapped)");
                 for(let p of posts){
-                    p.classList.add("normal");
-                    p.classList.remove("swapped");
+                    p.classList.add("swapped");
+                    p.classList.remove("normal");
                     let pc=p.children[0];
                     pc.children[1].after(pc.children[0]);
                 }
@@ -283,8 +280,8 @@ class PageModifier{
                 .then((element) => {
                 let posts = document.querySelectorAll(".swap_post_loaded:not(.normal)");
                 for(let p of posts){
-                    p.classList.add("swapped");
-                    p.classList.remove("normal");
+                    p.classList.add("normal");
+                    p.classList.remove("swapped");
                     let pc=p.children[0];
                     pc.children[1].after(pc.children[0]);
                 }
@@ -292,24 +289,24 @@ class PageModifier{
         }
     }
     topScrollMode(enabled){
+        /*****
+
+
+        SCROLL BOTTON CODE GOES HERE!
+
+
         if(enabled){
             console.log("topScroll Mode Enabled - Add a scroll to top button");
         }
         else {
             console.log("topScroll Mode Disabled -  Remove the scroll to top button");
         }
+        */
     }
     previewMode(enabled){
-        // Add a class to the divs, they do not have one
-        Helpers.checkElement("div.card-header")
-            .then((element) => {
-            const posts = document.querySelectorAll("div.card-header:not(.post_header)");
-            for(let p of posts){
-                p.classList.add("post_header");
-            }
-        }); //Easier to work with now
-
+        PageModifier.setupPreviewMode();
         if(enabled){
+            console.log("enabled");
             //Select them all then add a mouseover event
             let postContent = document.querySelectorAll(".post_header");
             for(let p of postContent){
@@ -325,6 +322,33 @@ class PageModifier{
                 if(anchor) anchor.onmouseover=null;
             }
         }
+    }
+    static setupReverseMode(){
+        // Whether or not it is enabled
+        // Add a class to the divs, they do not have one
+        Helpers.observeDOM(() => {
+            // Add a class to the divs, they do not have one
+            Helpers.checkElement("#content-wrapper .page .container")
+                .then((element) => {
+                const container = document.querySelectorAll("#content-wrapper .page .container");
+                let posts = container[0].querySelectorAll(":scope > div:not([class]):not(.swap_post_loaded)");
+                for(let p of posts){
+                    p.classList.add("swap_post_loaded");
+                }
+            });
+
+        });
+    }
+
+    static setupPreviewMode(){
+        // Add a class to the divs, they do not have one
+        Helpers.checkElement("div.card-header")
+            .then((element) => {
+            const posts = document.querySelectorAll("div.card-header:not(.post_header)");
+            for(let p of posts){
+                p.classList.add("post_header");
+            }
+        }); //Easier to work with now
     }
 }
 
@@ -393,15 +417,29 @@ const PreviewActions = {
 
 async function main(){
     const settingsManager = new Settings();
+    //Load any values that are in the GM.values
     await settingsManager.loadValues();
 
     const navModifier = new NavModifier();
+    //Add the UI elements to the navigation bar
     navModifier.addNavSettings(settingsManager);
+    //Add the actions to the Nav elements
     navModifier.addNavActions(settingsManager);
 
     const pageModifier = new PageModifier();
 
-    settingsManager.startEventListeners(pageModifier);
+    // If a UI element add its own class for identification, set it up
+    settingsManager.setupInitialElements(pageModifier);
+
+    // Start listening for setting Updates
+    settingsManager.startSettingUpdateListeners(pageModifier);
+
+    // Watch the DOM for new posts to load
+    Helpers.observeDOM(() => {
+        if(settingsManager.compact) pageModifier.compactMode(settingsManager.compact);
+        if(settingsManager.preview) pageModifier.previewMode(settingsManager.preview);
+        if(settingsManager.reverse) pageModifier.reverseMode(settingsManager.reverse);
+    });
 }
 
 
