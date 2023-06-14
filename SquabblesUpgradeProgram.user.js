@@ -78,14 +78,11 @@ class Helpers{
 }
 
 
-class UiModifier{
+class NavModifier{
     /*
-    Class to modify the existing UI.
-    Examples include adding a button to the navigation bar,
-    reordering the look of posts and comments,
-    or adding a button to scroll to the top of the page.
+    Class to modify the existing NavBar.
 
-    If you are modifying the UI in another location, consider moving it here.
+    If you are modifying the NavBar in another location, consider moving it here.
     */
     addNavSettings(settingMgr){
         /*
@@ -99,6 +96,7 @@ class UiModifier{
             `<li class="dropdown-item setting-toggle" id="topScroll"><i class="fa-solid ${settingMgr.topScroll ? "fa-toggle-on" : "fa-toggle-off"} px-1"></i>Scroll</li>`,
             `<li class="dropdown-item setting-toggle" id="preview"><i class="fa-solid ${settingMgr.preview ? "fa-toggle-on" : "fa-toggle-off"} px-1"></i>Preview</li>`
         ];
+
         // Wait until the navbar exists, then add a button
         Helpers.checkElement('.navbar')
             .then((element) => {
@@ -145,9 +143,7 @@ class UiModifier{
                     /// Scratch that, I did it lol
                     settingMgr.settingIdToToggle(button.id);
                 });
-                GM.addValueChangeListener(button.id, function(key, oldValue, newValue, remote) {
-                    // Print a message to the console when the value of the "savedTab" key changes
-                    console.log("The value of the '" + key + "' key has changed from '" + oldValue + "' to '" + newValue + "'");
+                GM.addValueChangeListener(button.id, (key, oldValue, newValue, remote) => {
                     // Get the icon for the toggle switch
                     let icon = button.querySelector("i");
                     // Remove ALL possible classes
@@ -158,6 +154,92 @@ class UiModifier{
                 });
             }
         });
+    }
+}
+
+class PageModifier{
+    /*
+    Class to modify the page's UI.
+
+    Examples include modifying the post lookout, adding scroll button, or
+    adding the preview pane for communities.
+
+    If you are modifying the page in another location, consider moving it here.
+    */
+    constructor(){}
+    compactMode(enabled){
+        if(enabled){
+            Helpers.checkElement(".comment")
+                .then((element) => {
+                const comments = document.querySelectorAll(".comment:not(.compact_loaded)");
+                for(let c of comments){
+                    c.classList.add("compact_loaded");
+                    c.querySelector(".comment-collapse-button").click();
+                }
+            });
+        }
+        else {
+            const comments = document.querySelectorAll(".comment");
+            for(let c of comments){
+                const anchors = c.querySelectorAll("a");
+                for(let a of anchors){
+                    if(a.innerHTML == "Expand") a.click();
+                }
+            }
+        }
+    }
+    reverseMode(enabled){
+        // Whether or not it is enabled
+        // Add a class to the divs, they do not have one
+        Helpers.checkElement("#content-wrapper")
+            .then((element) => {
+            let posts = document.querySelectorAll("#content-wrapper .page .container")[0].querySelectorAll(":scope > div:not([class])");
+            for(let p of posts){
+                p.classList.add("swap_post_loaded"); //Easier to work with now!
+            }
+        });
+
+        if(enabled){
+            Helpers.checkElement(".swap_post_loaded")
+                .then((element) => {
+                let posts = document.querySelectorAll(".swap_post_loaded:not(.swapped)");
+                for(let p of posts){
+                    p.classList.add("normal");
+                    p.classList.remove("swapped");
+                    let pc=p.children[0];
+                    pc.children[1].after(pc.children[0]);
+                }
+            });
+        }
+        else {
+            Helpers.checkElement(".swap_post_loaded")
+                .then((element) => {
+                let posts = document.querySelectorAll(".swap_post_loaded:not(.normal)");
+                for(let p of posts){
+                    p.classList.add("swapped");
+                    p.classList.remove("normal");
+                    let pc=p.children[0];
+                    pc.children[1].after(pc.children[0]);
+                }
+            });
+        }
+    }
+    topScrollMode(enabled){
+        if(enabled){
+            console.log("topScroll Mode Enabled - Add a scroll to top button");
+        }
+        else {
+            console.log("topScroll Mode Disabled -  Remove the scroll to top button");
+        }
+    }
+    previewMode(enabled){
+        const preivewPanel = `<div style="background: white;" class="card shadow-sm px-3 py-2 communityPreviewPane"><div><strong>${"Community"}</strong><div>${"Description"}</div></div></div>`;
+        if(enabled){
+            console.log("preview Mode Enabled - Show previews when mouse over community");
+        }
+        else {
+            console.log("preview Mode Disabled - Do nothing when mouse over community");
+        }
     }
 }
 
@@ -185,20 +267,20 @@ class Settings{
         this.preview = await GM.getValue("preview", false);
     }
     toggleCompact(){
-        GM.setValue("compact", !this.compact);
         this.compact = !this.compact;
+        GM.setValue("compact", this.compact);
     }
     toggleReverse(){
-        GM.setValue("reverse", !this.reverse);
         this.reverse = !this.reverse;
+        GM.setValue("reverse", this.reverse);
     }
     toggleTopScroll(){
-        GM.setValue("topScroll", !this.topScroll);
         this.topScroll = !this.topScroll;
+        GM.setValue("topScroll", this.topScroll);
     }
     togglePreview(){
-        GM.setValue("preview", !this.preview);
         this.preview = !this.preview;
+        GM.setValue("preview", this.preview);
     }
     settingIdToToggle(settingName){
         /**
@@ -212,6 +294,12 @@ class Settings{
             case "preview": return this.togglePreview();
         }
     }
+    startEventListeners(pageModifier){
+        GM.addValueChangeListener("compact", () => pageModifier.compactMode(this.compact));
+        GM.addValueChangeListener("reverse", () => pageModifier.reverseMode(this.reverse));
+        GM.addValueChangeListener("topScroll", () => pageModifier.topScrollMode(this.topScroll));
+        GM.addValueChangeListener("preview", () => pageModifier.previewMode(this.preview));
+    }
 }
 
 
@@ -219,9 +307,12 @@ async function main(){
     const settingsManager = new Settings();
     await settingsManager.loadValues();
 
-    const uiModifier = new UiModifier();
-    uiModifier.addNavSettings(settingsManager);
-    uiModifier.addNavActions(settingsManager);
+    const navModifier = new NavModifier();
+    navModifier.addNavSettings(settingsManager);
+    navModifier.addNavActions(settingsManager);
+
+    const pageModifier = new PageModifier(settingsManager)
+    settingsManager.startEventListeners(pageModifier);
 }
 
 
