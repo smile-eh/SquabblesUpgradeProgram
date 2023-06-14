@@ -11,6 +11,17 @@
 // @grant        GM.addValueChangeListener
 // ==/UserScript==
 
+/****************************
+      GLOBAL VARIABLES
+****************************/
+
+const apiCache = new Map();
+
+/****************************
+          CLASSES
+  (Which are basically just objects?
+  Who designed this language?)
+****************************/
 
 class Helpers{
     /*
@@ -77,6 +88,64 @@ class Helpers{
     }
 }
 
+class Settings{
+    /*
+    Class to hold the settings that currently exist in the GM.state (GM.setState/GM.getState)
+    Interaction with the state should only be done through this class.
+    If you are calling GM.setState/getState/addValueChangeListener in another location,
+    consider moving it here.
+    */
+    constructor(){
+        this.compact = false;
+        this.reverse = false;
+        this.topScroll = false;
+        this.preview = false;
+    }
+    async loadValues(){
+        /*
+        Load the values that currently exist in the state, and set them accordingly
+        */
+        this.compact = await GM.getValue("compact", false);
+        this.reverse = await GM.getValue("reverse", false);
+        this.topScroll = await GM.getValue("topScroll", false);
+        this.preview = await GM.getValue("preview", false);
+    }
+    toggleCompact(){
+        this.compact = !this.compact;
+        GM.setValue("compact", this.compact);
+    }
+    toggleReverse(){
+        this.reverse = !this.reverse;
+        GM.setValue("reverse", this.reverse);
+    }
+    toggleTopScroll(){
+        this.topScroll = !this.topScroll;
+        GM.setValue("topScroll", this.topScroll);
+    }
+    togglePreview(){
+        this.preview = !this.preview;
+        GM.setValue("preview", this.preview);
+    }
+    settingIdToToggle(settingName){
+        /**
+        Match an ID of a setting to a function to call when it is toggled
+        * @param {String} ID representing the setting
+        */
+        switch(settingName){
+            case "compact": return this.toggleCompact();
+            case "reverse": return this.toggleReverse();
+            case "topScroll": return this.toggleTopScroll();
+            case "preview": return this.togglePreview();
+        }
+    }
+    startEventListeners(pageModifier){
+        GM.addValueChangeListener("compact", () => pageModifier.compactMode(this.compact));
+        GM.addValueChangeListener("reverse", () => pageModifier.reverseMode(this.reverse));
+        GM.addValueChangeListener("topScroll", () => pageModifier.topScrollMode(this.topScroll));
+        GM.addValueChangeListener("preview", () => pageModifier.previewMode(this.preview, pageModifier.api));
+    }
+}
+
 
 class NavModifier{
     /*
@@ -93,7 +162,7 @@ class NavModifier{
         const settingsDropDownHtml =[ // String representing the HTML for the items in our drop down list. Whitespace matters. Think *dangerouslySetInnerHTML* from React.
             `<li class="dropdown-item setting-toggle" id="compact"><i class="fa-solid ${settingMgr.compact ? "fa-toggle-on" : "fa-toggle-off"} px-1"></i>Compact</li>`,
             `<li class="dropdown-item setting-toggle" id="reverse"><i class="fa-solid ${settingMgr.reverse ? "fa-toggle-on" : "fa-toggle-off"} px-1"></i>Reverse</li>`,
-            `<li class="dropdown-item setting-toggle" id="topScroll"><i class="fa-solid ${settingMgr.topScroll ? "fa-toggle-on" : "fa-toggle-off"} px-1"></i>Scroll</li>`,
+            `<li class="disabled dropdown-item setting-toggle" id="topScroll"><i class="fa-solid ${settingMgr.topScroll ? "fa-toggle-on" : "fa-toggle-off"} px-1"></i>Scroll</li>`,
             `<li class="dropdown-item setting-toggle" id="preview"><i class="fa-solid ${settingMgr.preview ? "fa-toggle-on" : "fa-toggle-off"} px-1"></i>Preview</li>`
         ];
 
@@ -166,7 +235,6 @@ class PageModifier{
 
     If you are modifying the page in another location, consider moving it here.
     */
-    constructor(){}
     compactMode(enabled){
         if(enabled){
             Helpers.checkElement(".comment")
@@ -233,75 +301,96 @@ class PageModifier{
         }
     }
     previewMode(enabled){
-        const preivewPanel = `<div style="background: white;" class="card shadow-sm px-3 py-2 communityPreviewPane"><div><strong>${"Community"}</strong><div>${"Description"}</div></div></div>`;
+        // Add a class to the divs, they do not have one
+        Helpers.checkElement("div.card-header")
+            .then((element) => {
+            const posts = document.querySelectorAll("div.card-header:not(.post_header)");
+            for(let p of posts){
+                p.classList.add("post_header");
+            }
+        }); //Easier to work with now
+
         if(enabled){
-            console.log("preview Mode Enabled - Show previews when mouse over community");
+            //Select them all then add a mouseover event
+            let postContent = document.querySelectorAll(".post_header");
+            for(let p of postContent){
+                let anchor = p.nextSibling.querySelector("a")
+                if(anchor) anchor.onmouseover=PreviewActions.handleMouseOver.bind(this, anchor);
+            }
         }
         else {
-            console.log("preview Mode Disabled - Do nothing when mouse over community");
+            //Select them all then add a mouseover event
+            let postContent = document.querySelectorAll(".post_header");
+            for(let p of postContent){
+                let anchor = p.nextSibling.querySelector("a")
+                if(anchor) anchor.onmouseover=null;
+            }
         }
     }
 }
 
 
-class Settings{
+/****************************
+      CONSTANT OBJECTS
+****************************/
+
+const API = {
     /*
-    Class to hold the settings that currently exist in the GM.state (GM.setState/GM.getState)
-    Interaction with the state should only be done through this class.
-    If you are calling GM.setState/getState/addValueChangeListener in another location,
-    consider moving it here.
+    Class to communicate with the Squabble API.
+
+    If you are modifying the sending API requests in another location, consider moving it here.
     */
-    constructor(){
-        this.compact = false;
-        this.reverse = false;
-        this.topScroll = false;
-        this.preview = false;
-    }
-    async loadValues(){
-        /*
-        Load the values that currently exist in the state, and set them accordingly
-        */
-        this.compact = await GM.getValue("compact", false);
-        this.reverse = await GM.getValue("reverse", false);
-        this.topScroll = await GM.getValue("topScroll", false);
-        this.preview = await GM.getValue("preview", false);
-    }
-    toggleCompact(){
-        this.compact = !this.compact;
-        GM.setValue("compact", this.compact);
-    }
-    toggleReverse(){
-        this.reverse = !this.reverse;
-        GM.setValue("reverse", this.reverse);
-    }
-    toggleTopScroll(){
-        this.topScroll = !this.topScroll;
-        GM.setValue("topScroll", this.topScroll);
-    }
-    togglePreview(){
-        this.preview = !this.preview;
-        GM.setValue("preview", this.preview);
-    }
-    settingIdToToggle(settingName){
-        /**
-        Match an ID of a setting to a function to call when it is toggled
-        * @param {String} ID representing the setting
-        */
-        switch(settingName){
-            case "compact": return this.toggleCompact();
-            case "reverse": return this.toggleReverse();
-            case "topScroll": return this.toggleTopScroll();
-            case "preview": return this.togglePreview();
-        }
-    }
-    startEventListeners(pageModifier){
-        GM.addValueChangeListener("compact", () => pageModifier.compactMode(this.compact));
-        GM.addValueChangeListener("reverse", () => pageModifier.reverseMode(this.reverse));
-        GM.addValueChangeListener("topScroll", () => pageModifier.topScrollMode(this.topScroll));
-        GM.addValueChangeListener("preview", () => pageModifier.previewMode(this.preview));
+    requestCommunityInfo: async (communityPath) => {
+        //Check if the API json has been stored in the cache for this community
+        if(apiCache.has(communityPath)) return apiCache.get(communityPath);
+
+        //Api route
+        const rootUri = "https://squabbles.io/api"
+        const request = new Request(rootUri + communityPath, {
+            method:"GET"
+        });
+        //Get the info from the api
+        const res = await fetch(request);
+
+        const json = await res.json()
+
+        // Save the response json to the cache
+        apiCache.set(communityPath, json);
+        return json;
     }
 }
 
+const PreviewActions = {
+    makePreviewDiv: (values, parent) => {
+        // Before we make a new preview pane
+        // To be safe, remove any old ones
+        for(let e of document.getElementsByClassName("communityPreviewPane")) e.remove();
+
+        //String representing the html for the preview panel
+        const previewPanel = `<div style="background: white;" class="card shadow-sm px-3 py-2 communityPreviewPane"><div><strong>${values.name}</strong><div>${values.description}</div></div></div>`;
+
+
+        return Helpers.htmlToElement(previewPanel);
+    },
+
+    //Callback function for the mouse over event
+    handleMouseOver: async (e, api) => {
+        //Get the info from the community
+        const returnValues = await API.requestCommunityInfo(e.pathname)
+        .then((vals) =>{
+            const previewDiv = PreviewActions.makePreviewDiv(vals, e);
+            //When the user's mouse leaves the anchor tag, delete the preview
+            e.onmouseleave= () => {
+                previewDiv.remove();
+            };
+            e.parentNode.appendChild(previewDiv);
+        });
+    }
+}
+
+/****************************
+          FUNCTIONS
+****************************/
 
 async function main(){
     const settingsManager = new Settings();
@@ -311,11 +400,12 @@ async function main(){
     navModifier.addNavSettings(settingsManager);
     navModifier.addNavActions(settingsManager);
 
-    const pageModifier = new PageModifier(settingsManager)
+    const pageModifier = new PageModifier();
+
     settingsManager.startEventListeners(pageModifier);
 }
 
 
 // Thank you for reading this script!
-//We start in main
+// We start in main
 main();
