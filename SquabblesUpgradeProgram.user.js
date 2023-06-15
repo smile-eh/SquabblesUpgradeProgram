@@ -331,7 +331,6 @@ class PageModifier{
             });
 
             // Show the button after the page is scrolled down a little
-            console.log(eBtnScrollTop);
             app.onscroll = () => {
                 if (app.scrollTop > 20) {
                     eBtnScrollTop.style.display = 'flex';
