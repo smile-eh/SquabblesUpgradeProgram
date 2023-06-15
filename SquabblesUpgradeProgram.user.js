@@ -402,6 +402,10 @@ class PageModifier{
         // Navigation bar buttons
         const navbarButtonsSelector = '.navbar .container > div:last-of-type .rounded-circle';
         PageModifier.addButtonClass(navbarButtonsSelector, buttonClass);
+
+        // topScroll button
+        const topScrollButtonSelector = '#btnScrollTop';
+        PageModifier.addButtonClass(topScrollButtonSelector, buttonClass);
     }
 
     static addButtonClass = (selector, buttonClass, buttonSize) => {
