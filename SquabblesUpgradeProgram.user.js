@@ -318,10 +318,12 @@ class PageModifier{
             const eBtnScrollTop = document.getElementById(btnScrollTopId);
 
             // Style the button *after* it's been messed with by the DOM
-            eBtnScrollTop.style.display = (app.scrollTop > 20) ? 'flex' : 'none';
+            eBtnScrollTop.style.display = 'flex';
             eBtnScrollTop.style.width = btnScrollTopSize;
             eBtnScrollTop.style.height = btnScrollTopSize;
             eBtnScrollTop.style.padding = '0';
+            eBtnScrollTop.style.transition = 'opacity 125ms linear';
+            eBtnScrollTop.style.opacity = (app.scrollTop > 20) ? '1' : '0';
             const eBtnScrollTopIcon = eBtnScrollTop.querySelector('i');
             eBtnScrollTopIcon.style.margin = 'auto';
 
@@ -333,10 +335,10 @@ class PageModifier{
             // Show the button after the page is scrolled down a little
             app.onscroll = () => {
                 if (app.scrollTop > 20) {
-                    eBtnScrollTop.style.display = 'flex';
+                    eBtnScrollTop.style.opacity = '1';
                 }
                 else {
-                    eBtnScrollTop.style.display = 'none';
+                    eBtnScrollTop.style.opacity = '0';
                 }
             }
 
