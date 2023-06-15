@@ -334,11 +334,11 @@ class PageModifier{
     }
 
     normalizeButtonsMode(enabled){
-        if(enabled){
-            // Setup for being able to change the size and shape of the buttons later
-            const buttonClass = 'round-button'
-            const buttonSize = '2.75em';
+        // Setup for being able to change the size and shape of the buttons later
+        const buttonClass = 'round-button'
+        const buttonSize = '2.5em';
 
+        if(enabled){
             PageModifier.setupNormalizeButtonsMode(buttonClass);
 
             let buttons = document.querySelectorAll(`.${buttonClass}`);
@@ -355,7 +355,16 @@ class PageModifier{
             }
         }
         else {
-            console.log("normalizeButtons Mode Disabled -  Return the buttons to whatever shape the page decides");
+            let buttons = document.querySelectorAll(`.${buttonClass}`);
+            for (let button of buttons) {
+                button.classList.remove('normalized');
+                button.style.display = null;
+                button.style.width = null;
+                button.style.height = null;
+                button.style.padding = null;
+                let buttonIcon = button.querySelector('i');
+                if (buttonIcon) { buttonIcon.style.margin = null; }
+            }
         }
     }
 
