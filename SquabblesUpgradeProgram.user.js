@@ -191,8 +191,9 @@ class NavModifier{
             //update the icon
             hamClone.querySelector("i.fa-bars").classList.add("fa-cog");
             hamClone.querySelector("i.fa-bars").classList.remove("fa-bars");
-            // add the margin that should be at the start
+            // modify the margin that should be at the start
             hamClone.querySelector("button").classList.add("ms-2");
+            hamClone.querySelector("button").classList.remove("ms-3");
 
             //get the drop down list from the hamburger menu
             let dropdown = hamClone.querySelector("ul")
