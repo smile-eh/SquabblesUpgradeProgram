@@ -100,6 +100,7 @@ class Settings{
         this.reverse = false;
         this.topScroll = false;
         this.preview = false;
+        this.normalizeButtons = false;
     }
     async loadValues(){
         /*
@@ -109,6 +110,7 @@ class Settings{
         this.reverse = await GM.getValue("reverse", false);
         this.topScroll = await GM.getValue("topScroll", false);
         this.preview = await GM.getValue("preview", false);
+        this.normalizeButtons = await GM.getValue("normalizeButtons", false);
     }
     toggleCompact(){
         this.compact = !this.compact;
@@ -126,6 +128,10 @@ class Settings{
         this.preview = !this.preview;
         GM.setValue("preview", this.preview);
     }
+    toggleNormalizeButtons(){
+        this.normalizeButtons = !this.normalizeButtons;
+        GM.setValue("normalizeButtons", this.normalizeButtons);
+    }
     settingIdToToggle(settingName){
         /**
         Match an ID of a setting to a function to call when it is toggled
@@ -136,6 +142,7 @@ class Settings{
             case "reverse": return this.toggleReverse();
             case "topScroll": return this.toggleTopScroll();
             case "preview": return this.togglePreview();
+            case "normalizeButtons": return this.toggleNormalizeButtons();
         }
     }
     startSettingUpdateListeners(pageModifier){
@@ -143,6 +150,7 @@ class Settings{
         GM.addValueChangeListener("reverse", () => pageModifier.reverseMode(this.reverse));
         GM.addValueChangeListener("topScroll", () => pageModifier.topScrollMode(this.topScroll));
         GM.addValueChangeListener("preview", () => pageModifier.previewMode(this.preview));
+        GM.addValueChangeListener("normalizeButtons", () => pageModifier.normalizeButtonsMode(this.normalizeButtons));
     }
     setupInitialElements(pageModifier){
         PageModifier.setupReverseMode();
@@ -167,7 +175,8 @@ class NavModifier{
             `<li class="dropdown-item setting-toggle" id="compact"><i class="fa-solid ${settingMgr.compact ? "fa-toggle-on" : "fa-toggle-off"} px-1"></i>Compact</li>`,
             `<li class="dropdown-item setting-toggle" id="reverse"><i class="fa-solid ${settingMgr.reverse ? "fa-toggle-on" : "fa-toggle-off"} px-1"></i>Reverse</li>`,
             `<li class="dropdown-item setting-toggle" id="topScroll"><i class="fa-solid ${settingMgr.topScroll ? "fa-toggle-on" : "fa-toggle-off"} px-1"></i>Scroll</li>`,
-            `<li class="dropdown-item setting-toggle" id="preview"><i class="fa-solid ${settingMgr.preview ? "fa-toggle-on" : "fa-toggle-off"} px-1"></i>Preview</li>`
+            `<li class="dropdown-item setting-toggle" id="preview"><i class="fa-solid ${settingMgr.preview ? "fa-toggle-on" : "fa-toggle-off"} px-1"></i>Preview</li>`,
+            `<li class="dropdown-item setting-toggle" id="normalizeButtons"><i class="fa-solid ${settingMgr.normalizeButtons ? "fa-toggle-on" : "fa-toggle-off"} px-1"></i>Normalize</li>`
         ];
 
         // Wait until the navbar exists, then add a button
@@ -370,6 +379,42 @@ class PageModifier{
             }
         }
     }
+
+    normalizeButtonsMode(enabled){
+        // Setup for being able to change the size and shape of the buttons later
+        const buttonClass = 'round-button'
+        const buttonSize = '2.5em';
+
+        if(enabled){
+            PageModifier.setupNormalizeButtonsMode(buttonClass);
+
+            let buttons = document.querySelectorAll(`.${buttonClass}`);
+            for (let button of buttons) {
+                if (!(button.classList.contains('normalized'))) {
+                    button.classList.add('normalized');
+                    button.style.display = 'flex';
+                    button.style.width = buttonSize;
+                    button.style.height = buttonSize;
+                    button.style.padding = '0';
+                    let buttonIcon = button.querySelector('i');
+                    if (buttonIcon) { buttonIcon.style.margin = 'auto'; }
+                }
+            }
+        }
+        else {
+            let buttons = document.querySelectorAll(`.${buttonClass}`);
+            for (let button of buttons) {
+                button.classList.remove('normalized');
+                button.style.display = null;
+                button.style.width = null;
+                button.style.height = null;
+                button.style.padding = null;
+                let buttonIcon = button.querySelector('i');
+                if (buttonIcon) { buttonIcon.style.margin = null; }
+            }
+        }
+    }
+
     static setupReverseMode(){
         // Whether or not it is enabled
         // Add a class to the divs, they do not have one
@@ -397,6 +442,26 @@ class PageModifier{
             }
         }); //Easier to work with now
     }
+
+    static setupNormalizeButtonsMode(buttonClass){
+        // Add a class to the buttons we want to normalize
+
+        // Navigation bar buttons
+        const navbarButtonsSelector = '.navbar .container > div:last-of-type .rounded-circle';
+        PageModifier.addButtonClass(navbarButtonsSelector, buttonClass);
+    }
+
+    static addButtonClass = (selector, buttonClass, buttonSize) => {
+        Helpers.checkElement(selector)
+            .then((element) => {
+            const buttons = document.querySelectorAll(selector);
+            for (let button of buttons) {
+                if (!(button.classList.contains(buttonClass))) {
+                    button.classList.add(buttonClass);
+                }
+            }
+        });
+    };
 }
 
 
@@ -486,6 +551,7 @@ async function main(){
         if(settingsManager.compact) pageModifier.compactMode(settingsManager.compact);
         if(settingsManager.preview) pageModifier.previewMode(settingsManager.preview);
         if(settingsManager.reverse) pageModifier.reverseMode(settingsManager.reverse);
+        if(settingsManager.normalizeButtons) pageModifier.normalizeButtonsMode(settingsManager.normalizeButtons);
         if(settingsManager.topScroll) pageModifier.topScrollMode(settingsManager.topScroll);
     });
 }
