@@ -166,7 +166,7 @@ class NavModifier{
         const settingsDropDownHtml =[ // String representing the HTML for the items in our drop down list. Whitespace matters. Think *dangerouslySetInnerHTML* from React.
             `<li class="dropdown-item setting-toggle" id="compact"><i class="fa-solid ${settingMgr.compact ? "fa-toggle-on" : "fa-toggle-off"} px-1"></i>Compact</li>`,
             `<li class="dropdown-item setting-toggle" id="reverse"><i class="fa-solid ${settingMgr.reverse ? "fa-toggle-on" : "fa-toggle-off"} px-1"></i>Reverse</li>`,
-            `<li class="disabled dropdown-item setting-toggle" id="topScroll"><i class="fa-solid ${settingMgr.topScroll ? "fa-toggle-on" : "fa-toggle-off"} px-1"></i>Scroll</li>`,
+            `<li class="dropdown-item setting-toggle" id="topScroll"><i class="fa-solid ${settingMgr.topScroll ? "fa-toggle-on" : "fa-toggle-off"} px-1"></i>Scroll</li>`,
             `<li class="dropdown-item setting-toggle" id="preview"><i class="fa-solid ${settingMgr.preview ? "fa-toggle-on" : "fa-toggle-off"} px-1"></i>Preview</li>`
         ];
 
@@ -289,19 +289,66 @@ class PageModifier{
         }
     }
     topScrollMode(enabled){
-        /*****
+        
+        const btnScrollTopSize = '3rem';
+        const btnScrollTopId = 'btnScrollTop';
 
+        if(enabled) {
 
-        SCROLL BOTTON CODE GOES HERE!
+            // Do nothing if the button already exists
+            if (document.getElementById(btnScrollTopId)) return;
 
+            let app = document.getElementById('app');
 
-        if(enabled){
+            // Create the button...
+            const btnScrollTop = document.createElement('button');
+            btnScrollTop.id = btnScrollTopId;
+            const btnClasses = ['btn', 'btn-lg', 'rounded-circle', 'btn-secondary',
+                                'position-fixed', 'bottom-0', 'end-0', 'm-3'];
+            btnScrollTop.classList.add(...btnClasses);
+
+            // ...and add its icon
+            let buttonIcon = document.createElement('i');
+            const iconClasses = ['fa-solid', 'fa-up'];
+            buttonIcon.classList.add(...iconClasses);
+            btnScrollTop.appendChild(buttonIcon);
+
+            // Add it to the DOM
+            document.body.appendChild(btnScrollTop);
+            const eBtnScrollTop = document.getElementById(btnScrollTopId);
+
+            // Style the button *after* it's been messed with by the DOM
+            eBtnScrollTop.style.display = 'flex';
+            eBtnScrollTop.style.width = btnScrollTopSize;
+            eBtnScrollTop.style.height = btnScrollTopSize;
+            eBtnScrollTop.style.padding = '0';
+            eBtnScrollTop.style.transition = 'opacity 125ms linear';
+            eBtnScrollTop.style.opacity = (app.scrollTop > 20) ? '1' : '0';
+            const eBtnScrollTopIcon = eBtnScrollTop.querySelector('i');
+            eBtnScrollTopIcon.style.margin = 'auto';
+
+            // Add its events
+            eBtnScrollTop.addEventListener('click', () => {
+                app.scrollTo({top: 0, left: 0, behavior: 'smooth'});
+            });
+
+            // Show the button after the page is scrolled down a little
+            app.onscroll = () => {
+                if (app.scrollTop > 20) {
+                    eBtnScrollTop.style.opacity = '1';
+                }
+                else {
+                    eBtnScrollTop.style.opacity = '0';
+                }
+            }
+
             console.log("topScroll Mode Enabled - Add a scroll to top button");
         }
         else {
+            document.getElementById(btnScrollTopId).remove();
+
             console.log("topScroll Mode Disabled -  Remove the scroll to top button");
         }
-        */
     }
     previewMode(enabled){
         PageModifier.setupPreviewMode();
@@ -439,6 +486,7 @@ async function main(){
         if(settingsManager.compact) pageModifier.compactMode(settingsManager.compact);
         if(settingsManager.preview) pageModifier.previewMode(settingsManager.preview);
         if(settingsManager.reverse) pageModifier.reverseMode(settingsManager.reverse);
+        if(settingsManager.topScroll) pageModifier.topScrollMode(settingsManager.topScroll);
     });
 }
 
