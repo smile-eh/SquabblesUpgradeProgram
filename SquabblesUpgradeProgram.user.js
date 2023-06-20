@@ -174,8 +174,8 @@ class NavModifier{
         const settingsDropDownHtml =[ // String representing the HTML for the items in our drop down list. Whitespace matters. Think *dangerouslySetInnerHTML* from React.
             `<li class="dropdown-item setting-toggle" id="compact"><i class="fa-solid ${settingMgr.compact ? "fa-toggle-on" : "fa-toggle-off"} px-1"></i>Compact</li>`,
             `<li class="dropdown-item setting-toggle" id="reverse"><i class="fa-solid ${settingMgr.reverse ? "fa-toggle-on" : "fa-toggle-off"} px-1"></i>Reverse</li>`,
-            `<li class="dropdown-item setting-toggle" id="topScroll"><i class="fa-solid ${settingMgr.topScroll ? "fa-toggle-on" : "fa-toggle-off"} px-1"></i>Scroll</li>`,
             `<li class="dropdown-item setting-toggle" id="preview"><i class="fa-solid ${settingMgr.preview ? "fa-toggle-on" : "fa-toggle-off"} px-1"></i>Preview</li>`,
+            `<li class="dropdown-item setting-toggle" id="topScroll"><i class="fa-solid ${settingMgr.topScroll ? "fa-toggle-on" : "fa-toggle-off"} px-1"></i>Scroll</li>`,
             `<li class="dropdown-item setting-toggle" id="normalizeButtons"><i class="fa-solid ${settingMgr.normalizeButtons ? "fa-toggle-on" : "fa-toggle-off"} px-1"></i>Normalize</li>`
         ];
 
@@ -553,8 +553,8 @@ async function main(){
         if(settingsManager.compact) pageModifier.compactMode(settingsManager.compact);
         if(settingsManager.preview) pageModifier.previewMode(settingsManager.preview);
         if(settingsManager.reverse) pageModifier.reverseMode(settingsManager.reverse);
-        if(settingsManager.normalizeButtons) pageModifier.normalizeButtonsMode(settingsManager.normalizeButtons);
         if(settingsManager.topScroll) pageModifier.topScrollMode(settingsManager.topScroll);
+        if(settingsManager.normalizeButtons) pageModifier.normalizeButtonsMode(settingsManager.normalizeButtons);
     });
 }
 
